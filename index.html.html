@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mímicas: Filmes & Séries</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Efeito de "virar" o card ao revelar o título */
+        .title-display {
+            backface-visibility: hidden;
+            transition: transform 0.6s;
+        }
+        .title-display.revealed {
+            transform: rotateY(180deg);
+        }
+        /* Efeito de pulsação para o timer */
+        .timer-pulse {
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: .7;
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Tela de Configuração (Inicial) -->
+    <div id="setup-screen" class="w-full max-w-lg bg-white shadow-2xl rounded-2xl overflow-hidden p-8 space-y-6">
+        <h1 class="text-3xl font-bold text-blue-600 text-center">Mímicas: Filmes & Séries</h1>
+        <h2 class="text-xl font-semibold text-gray-700 text-center">Configure as Equipes</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="team-1-input" class="block text-sm font-medium text-gray-700 mb-1">Nome da Equipe 1</label>
+                <input type="text" id="team-1-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Equipe 1">
+            </div>
+            <div>
+                <label for="team-2-input" class="block text-sm font-medium text-gray-700 mb-1">Nome da Equipe 2</label>
+                <input type="text" id="team-2-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Equipe 2">
+            </div>
+        </div>
+
+        <button id="start-setup-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-700 transition-all focus:outline-none focus:ring-2 focus:ring-green-400">
+            Iniciar Jogo!
+        </button>
+    </div>
+
+    <!-- Card Principal do Jogo (Oculto por padrão) -->
+    <div id="game-screen" class="w-full max-w-lg bg-white shadow-2xl rounded-2xl overflow-hidden p-8 space-y-6 hidden">
+
+        <!-- Placar -->
+        <div class="flex justify-around text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+                <div id="team-1-name" class="text-lg font-bold text-blue-600 truncate max-w-xs">Equipe 1</div>
+                <div id="team-1-score" class="text-5xl font-extrabold text-gray-800">0</div>
+            </div>
+            <div class="border-l border-gray-300 mx-4"></div>
+            <div>
+                <div id="team-2-name" class="text-lg font-bold text-red-600 truncate max-w-xs">Equipe 2</div>
+                <div id="team-2-score" class="text-5xl font-extrabold text-gray-800">0</div>
+            </div>
+        </div>
+
+        <!-- Controles do Jogo -->
+        <div class="space-y-3">
+            <button id="start-game-btn" class="w-full bg-green-500 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-600 transition-all">
+                Próximo Título
+            </button>
+            <button id="show-title-btn" disabled class="w-full bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-all hover:bg-yellow-600 disabled:opacity-50">
+                Ver Título (Só quem faz a mímica!)
+            </button>
+            <button id="reveal-answer-btn" disabled class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg transition-all hover:bg-green-600 disabled:opacity-50 disabled:bg-gray-400">
+                Revelar Título
+            </button>
+        </div>
+
+        <!-- Controles de Pontuação (Ocultos inicialmente) -->
+        <div id="scoring-controls" class="space-y-3 hidden">
+            <div class="text-center font-semibold text-gray-700">Quem acertou?</div>
+            <button id="score-team-1-btn" class="w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition-all">
+                +1 Ponto (Equipe 1)
+            </button>
+            <button id="score-team-2-btn" class="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition-all">
+                +1 Ponto (Equipe 2)
+            </button>
+        </div>
+
+        <!-- Informações do Jogo (Timer e Título) -->
+        <div class="text-center space-y-2 py-4 border-t border-b">
+            <div class="text-sm font-medium text-gray-500 uppercase">TEMPO RESTANTE</div>
+            <div id="timer" class="text-6xl font-bold text-gray-800">60</div>
+            
+            <div class="text-sm font-medium text-gray-500 uppercase pt-4">TÍTULO</div>
+            <div id="title-display" class="text-2xl font-bold text-gray-700 h-20 flex items-center justify-center p-2 break-words">
+                Aperte "Próximo Título" para começar
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal para "Ver Título" -->
+    <div id="title-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Prepare-se para a mímica! O título é:</h2>
+            <p id="modal-title-text" class="text-3xl font-bold text-blue-600 mb-6"></p>
+            <button id="close-modal-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all">
+                Entendi! (Começar a mímica)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Elementos DOM ---
+            const setupScreen = document.getElementById('setup-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const startSetupBtn = document.getElementById('start-setup-btn');
+            
+            const team1Input = document.getElementById('team-1-input');
+            const team2Input = document.getElementById('team-2-input');
+            
+            const team1NameDisplay = document.getElementById('team-1-name');
+            const team2NameDisplay = document.getElementById('team-2-name');
+            const team1ScoreDisplay = document.getElementById('team-1-score');
+            const team2ScoreDisplay = document.getElementById('team-2-score');
+
+            const scoringControls = document.getElementById('scoring-controls');
+            const scoreTeam1Btn = document.getElementById('score-team-1-btn');
+            const scoreTeam2Btn = document.getElementById('score-team-2-btn');
+
+            const startGameBtn = document.getElementById('start-game-btn');
+            const showTitleBtn = document.getElementById('show-title-btn');
+            const revealAnswerBtn = document.getElementById('reveal-answer-btn');
+            
+            const timerDisplay = document.getElementById('timer');
+            const titleDisplay = document.getElementById('title-display');
+            
+            const titleModal = document.getElementById('title-modal');
+            const modalTitleText = document.getElementById('modal-title-text');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+
+            // --- Listas de Títulos (em Português do Brasil) ---
+            
+            // Filmes
+            const moviesList = [
+                // Populares / Clássicos
+                "O Poderoso Chefão", "Pulp Fiction: Tempo de Violência", "O Senhor dos Anéis: O Retorno do Rei", "Forrest Gump", "Matrix",
+                "O Rei Leão", "Titanic", "Star Wars: Uma Nova Esperança", "De Volta para o Futuro", "Jurassic Park",
+                "Indiana Jones e os Caçadores da Arca Perdida", "O Iluminado", "A Origem", "Interestelar", "Mad Max: Estrada da Fúria",
+                "Parasita", "Cidade de Deus", "Clube da Luta", "Os Sete Samurais", "O Silêncio dos Inocentes",
+                "Gladiador", "O Sexto Sentido", "A Lista de Schindler", "Psicose", "Casablanca",
+                "O Exterminador do Futuro 2", "Alien: O Oitavo Passageiro", "Apocalypse Now", "Coringa", "Duna",
+                "Oppenheimer", "Barbie", "Tudo em Todo Lugar ao Mesmo Tempo", "Avatar: O Caminho da Água", "Top Gun: Maverick",
+                "Super Mario Bros. O Filme", "O Grande Hotel Budapeste", "Whiplash: Em Busca da Perfeição", "O Regresso", "Em Ritmo de Fuga",
+                "Nasce Uma Estrela", "Entre Facas e Segredos", "Pobres Criaturas", "Anatomia de uma Queda", "Assassinos da Lua das Flores",
+                "Godzilla Minus One", "A Cor Púrpura", "Planeta dos Macacos: O Reinado", "Furiosa: Uma Saga Mad Max", "Um Lugar Silencioso: Dia Um",
+                "Beetlejuice: Os Fantasmas se Divertem", "Gladiador 2", "Wicked", "O Auto da Compadecida", "Tropa de Elite",
+                "Central do Brasil", "Bacurau", "Minha Mãe é uma Peça", "Cidade de Deus", "Carandiru",
+
+                // Super Heróis
+                "Vingadores: Ultimato", "O Cavaleiro das Trevas", "Homem-Aranha no Aranhaverso", "Pantera Negra", "Guardiões da Galáxia",
+                "Mulher-Maravilha", "Deadpool", "Homem de Ferro", "Capitão América: O Soldado Invernal", "Thor: Ragnarok",
+                "Doutor Estranho", "Homem-Formiga", "Aquaman", "Shazam!", "Esquadrão Suicida",
+                "Venom", "Logan", "X-Men: Dias de um Futuro Esquecido", "Batman: O Início", "Watchmen",
+
+                // Animação / Família
+                "Toy Story", "Procurando Nemo", "Shrek", "Frozen: Uma Aventura Congelante", "Meu Malvado Favorito",
+                "Divertida Mente", "Zootopia", "Moana: Um Mar de Aventuras", "Encanto", "A Viagem de Chihiro",
+                "Meu Amigo Totoro", "O Castelo Animado", "Wall-E", "Up: Altas Aventuras", "Ratatouille",
+                "Os Incríveis", "Como Treinar o Seu Dragão", "Kung Fu Panda", "A Era do Gelo", "Soul",
+                "Divertida Mente 2", "O Menino e a Garça", "Gato de Botas 2: O Último Pedido", "Elementos", "Raya e o Último Dragão",
+                "Luca", "Red: Crescer é uma Fera", "Viva: A Vida é uma Festa", "Princesa Mononoke", "Klaus",
+                "Coraline e o Mundo Secreto", "O Estranho Mundo de Jack", "A Fuga das Galinhas", "O Gigante de Ferro", "O Príncipe do Egito"
+            ]; // Total: 130 filmes
+
+            // Séries
+            const seriesList = [
+                // Populares / Clássicos
+                "Friends", "Breaking Bad", "Guerra dos Tronos", "Stranger Things", "The Office",
+                "Os Simpsons", "La Casa de Papel", "The Crown", "Round 6", "Chernobyl",
+                "Black Mirror", "The Witcher", "Peaky Blinders", "Dark", "Narcos",
+                "Lost", "How I Met Your Mother", "Sex Education", "Ozark", "Better Call Saul",
+                "House of the Dragon", "O Urso", "Ruptura", "Succession", "Ted Lasso",
+                "Wandinha", "The Boys", "The Mandalorian", "Loki", "Arcane",
+                "O Gambito da Rainha", "Fleabag", "The Last of Us", "Gen V", "Xógun: A Gloriosa Saga do Japão",
+                "Bebê Rena", "Fallout", "O Problema dos 3 Corpos", "Yellowstone", "Bridgerton",
+                "This Is Us", "Grey's Anatomy", "Supernatural", "The Big Bang Theory", "Vikings",
+                "Sherlock", "Westworld", "True Detective", "Doctor Who", "Arquivo X",
+                "Família Soprano", "A Escuta (The Wire)", "Seinfeld", "Twin Peaks", "The Handmaid's Tale",
+                "Mindhunter", "O Mentalista", "House", "Prison Break", "Dexter",
+                "Suits", "Modern Family", "Brooklyn Nine-Nine", "Parks and Recreation", "Community",
+                "Todo Mundo Odeia o Chris", "Eu, a Patroa e as Crianças", "Um Maluco no Pedaço", "Smallville", "Glee",
+                "The Walking Dead", "American Horror Story", "The Vampire Diaries", "Gossip Girl", "Gilmore Girls",
+                "Orange is the New Black", "Sense8", "Stranger Things", "13 Reasons Why", "Elite",
+                "Lupin", "The Queen's Gambit", "Emily em Paris", "You", "The Umbrella Academy",
+                "Sex/Life", "Lucifer", "The Good Place", "Arrested Development", "BoJack Horseman",
+                "Rick and Morty", "South Park", "Family Guy", "Avatar: A Lenda de Aang", "Dragon Ball Z",
+                "Naruto", "One Piece", "Attack on Titan", "Pokémon", "Cavaleiros do Zodíaco",
+
+                // Brasileiras
+                "3%", "Sintonia", "Bom Dia, Verônica", "Dom", "Tapas & Beijos",
+                "Sai de Baixo", "Chaves", "Os Normais", "A Grande Família", "Carga Pesada"
+            ]; // Total: 105 séries
+            
+            const titleList = [...moviesList, ...seriesList]; // Total: 235 títulos
+
+            // --- Estado do Jogo ---
+            let gameInProgress = false;
+            let currentTitle = "";
+            let timeLeft = 60;
+            let timerId = null;
+
+            let team1Name = "Equipe 1";
+            let team2Name = "Equipe 2";
+            let team1Score = 0;
+            let team2Score = 0;
+            
+            // --- Funções de Lógica do Jogo ---
+
+            // Função para iniciar o jogo a partir da tela de setup
+            function initGame() {
+                // Pega os nomes das equipes (ou usa o padrão)
+                team1Name = team1Input.value.trim() || "Equipe 1";
+                team2Name = team2Input.value.trim() || "Equipe 2";
+
+                // Atualiza o placar
+                team1NameDisplay.textContent = team1Name;
+                team2NameDisplay.textContent = team2Name;
+
+                // Atualiza os botões de pontuação
+                scoreTeam1Btn.textContent = `+1 Ponto (${team1Name})`;
+                scoreTeam2Btn.textContent = `+1 Ponto (${team2Name})`;
+
+                // Esconde a tela de setup e mostra a tela do jogo
+                setupScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+
+                // Começa a primeira rodada
+                startGame();
+            }
+
+            // Inicia uma nova rodada
+            function startGame() {
+                gameInProgress = true;
+                stopTimer(); // Garante que qualquer timer anterior pare
+                
+                // Sorteia um novo título
+                currentTitle = titleList[Math.floor(Math.random() * titleList.length)];
+                
+                // Reseta o timer
+                timeLeft = 60;
+                timerDisplay.textContent = timeLeft;
+                timerDisplay.classList.remove('text-red-500', 'timer-pulse');
+                
+                // Gera os underlines, mas mantém espaços e pontuações
+                titleDisplay.textContent = currentTitle.replace(/[a-záéíóúâêîôûãõç0-9]/gi, '_');
+                
+                // Habilita/Desabilita botões
+                startGameBtn.textContent = "Próximo Título";
+                startGameBtn.disabled = true; // Desabilita "Próximo Título" até a rodada acabar
+                startGameBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                startGameBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'opacity-50', 'cursor-not-allowed');
+                
+                showTitleBtn.disabled = false;
+                showTitleBtn.classList.remove('bg-gray-400', 'disabled:opacity-50');
+                showTitleBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                
+                revealAnswerBtn.disabled = false;
+                revealAnswerBtn.classList.remove('disabled:opacity-50', 'disabled:bg-gray-400');
+
+                // Esconde os controles de pontuação
+                scoringControls.classList.add('hidden');
+            }
+
+            // Inicia o contador
+            function startTimer() {
+                if (timerId) return; // Não começa se já estiver rodando
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    timerDisplay.textContent = timeLeft;
+                    if (timeLeft <= 10) {
+                        timerDisplay.classList.add('text-red-500', 'timer-pulse');
+                    }
+                    if (timeLeft <= 0) {
+                        revealAnswer(); // Acaba o tempo, revela a resposta
+                    }
+                }, 1000);
+            }
+
+            // Para o contador
+            function stopTimer() {
+                clearInterval(timerId);
+                timerId = null;
+                timerDisplay.classList.remove('timer-pulse');
+            }
+
+            // Mostra o modal com o título
+            function showTitleModal() {
+                modalTitleText.textContent = currentTitle;
+                titleModal.classList.remove('hidden');
+            }
+
+            // Fecha o modal e inicia o timer
+            function closeTitleModal() {
+                titleModal.classList.add('hidden');
+                showTitleBtn.disabled = true; // Desabilita "Ver Título" após ser visto
+                showTitleBtn.classList.add('bg-gray-400', 'disabled:opacity-50');
+                showTitleBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                startTimer();
+            }
+
+            // Revela a resposta (por botão ou fim do tempo)
+            function revealAnswer() {
+                stopTimer();
+                gameInProgress = false;
+                titleDisplay.textContent = currentTitle;
+                timerDisplay.textContent = "0";
+                timerDisplay.classList.add('text-red-500');
+
+                // Reseta botões
+                showTitleBtn.disabled = true;
+                showTitleBtn.classList.add('bg-gray-400', 'disabled:opacity-50');
+                showTitleBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                
+                revealAnswerBtn.disabled = true;
+                revealAnswerBtn.classList.add('disabled:opacity-50', 'disabled:bg-gray-400');
+
+                // Habilita o botão de "Próximo Título" e mostra a pontuação
+                startGameBtn.textContent = "Próximo Título";
+                startGameBtn.disabled = false;
+                startGameBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                startGameBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'opacity-50', 'cursor-not-allowed');
+                scoringControls.classList.remove('hidden');
+            }
+
+            // Adiciona pontos a uma equipe
+            function scorePoint(team) {
+                if (team === 1) {
+                    team1Score++;
+                    team1ScoreDisplay.textContent = team1Score;
+                } else if (team === 2) {
+                    team2Score++;
+                    team2ScoreDisplay.textContent = team2Score;
+                }
+                // Esconde os botões de pontuação depois que um ponto é dado
+                scoringControls.classList.add('hidden');
+            }
+
+            // --- Event Listeners ---
+            
+            // Botão da tela de setup
+            startSetupBtn.addEventListener('click', initGame);
+
+            // Botões do Jogo
+            startGameBtn.addEventListener('click', startGame);
+            showTitleBtn.addEventListener('click', showTitleModal);
+            closeModalBtn.addEventListener('click', closeTitleModal);
+            revealAnswerBtn.addEventListener('click', revealAnswer);
+
+            // Botões de Pontuação
+            scoreTeam1Btn.addEventListener('click', () => scorePoint(1));
+            scoreTeam2Btn.addEventListener('click', () => scorePoint(2));
+
+            // Permite iniciar com "Enter" na tela de setup
+            team1Input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') startSetupBtn.click();
+            });
+            team2Input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') startSetupBtn.click();
+            });
+
+        });
+    </script>
+</body>
+</html>
